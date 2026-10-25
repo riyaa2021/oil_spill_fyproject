@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment files
+.env
+**/.env
+
+# Models and local data
+*.keras
+*.h5
+*.hdf5
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+results/
+
+# Node
+node_modules/
+frontend/dist/

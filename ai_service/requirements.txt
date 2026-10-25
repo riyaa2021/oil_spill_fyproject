@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+numpy
+opencv-python-headless
+Pillow
+python-dotenv
+# Install a TensorFlow version compatible with the environment that already runs your model.
+# If using a fresh environment, install tensorflow separately after checking compatibility.
