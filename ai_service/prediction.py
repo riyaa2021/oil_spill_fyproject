@@ -144,27 +144,25 @@ def calculate_spill_percentage(binary_mask):
     return float(percentage)
 
 
+
 def determine_risk_level(spill_percentage):
     """
-    Determine risk level based on spill percentage
-    
-    ✅ CORRECTED: Classification matches inverted predictions
-    
+    Classify oil-spill severity based on predicted spill coverage.
+
     Args:
-        spill_percentage: Percentage of spill coverage (0-100)
-    
+        spill_percentage: Percentage of image pixels predicted as spill (0-100).
+
     Returns:
-        risk_message: Risk level message
-        risk_level: Risk level category (success, info, warning, danger)
+        Tuple containing the display message and UI status.
     """
-    
+
     spill_percentage = float(spill_percentage)
-    
+
     if spill_percentage < 1.0:
-        return "✅ AREA CLEAN - No oil spill detected", "success"
+        return "LOW - No significant oil spill detected", "success"
     elif spill_percentage < 5.0:
-        return "ℹ️ MINIMAL SPILL - Monitor area", "info"
+        return "MEDIUM - Minimal oil spill detected", "info"
     elif spill_percentage < 15.0:
-        return "⚠️ WARNING - Moderate oil spill detected", "warning"
+        return "HIGH - Moderate oil spill detected", "warning"
     else:
-        return "🚨 CRITICAL - Severe oil spill detected", "danger"
+        return "CRITICAL - Severe oil spill detected", "danger"

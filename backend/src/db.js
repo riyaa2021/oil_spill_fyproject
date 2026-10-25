@@ -1,37 +1,66 @@
+
 import sqlite3 from 'sqlite3';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import dotenv from 'dotenv';
+import { open } from 'sqlite';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-dotenv.config();
-const here = path.dirname(fileURLToPath(import.meta.url));
-const configuredPath = process.env.DATABASE_PATH || './spillguard.db';
-const dbPath = path.isAbsolute(configuredPath) ? configuredPath : path.resolve(process.cwd(), configuredPath);
-export const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) console.error('SQLite connection failed:', err.message);
-  else console.log(`SQLite connected: ${dbPath}`);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const dataDirectory = path.join(__dirname, '..', 'data');
+
+if (!fs.existsSync(dataDirectory)) {
+  fs.mkdirSync(dataDirectory, { recursive: true });
+}
+
+const databasePath = path.join(dataDirectory, 'spillguard.db');
+
+const db = await open({
+  filename: databasePath,
+  driver: sqlite3.Database,
 });
 
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS detections (
+// Enable foreign-key enforcement.
+await db.exec('PRAGMA foreign_keys = ON');
+
+// Detection table.
+await db.exec(`
+  CREATE TABLE IF NOT EXISTS detection (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT NOT NULL,
-    result TEXT NOT NULL,
-    risk_level TEXT NOT NULL,
-    spill_percentage REAL NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
-  )`);
-});
+    image_name TEXT NOT NULL,
+    timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    severity TEXT NOT NULL,
+    coverage FLOAT NOT NULL,
+    confidence FLOAT
+  )
+`);
 
-export function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err); else resolve({ id: this.lastID, changes: this.changes });
-    });
-  });
+// Reports table.
+await db.exec(`
+  CREATE TABLE IF NOT EXISTS reports (
+    report_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    incident_id INTEGER NOT NULL,
+    report_path TEXT NOT NULL,
+    generated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (incident_id)
+      REFERENCES detection(id)
+      ON DELETE CASCADE
+  )
+`);
+
+export async function run(sql, params = []) {
+  return db.run(sql, params);
 }
-export function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows));
-  });
+
+export async function all(sql, params = []) {
+  return db.all(sql, params);
 }
+
+export async function get(sql, params = []) {
+  return db.get(sql, params);
+}
+
+export default db;
+

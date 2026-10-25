@@ -1,0 +1,17 @@
+import {useEffect,useState} from 'react';
+import {BarChart3,RefreshCw,FileText} from 'lucide-react';
+import {fetchAnalytics} from '../services/api.js';
+import SeverityBadge from '../components/SeverityBadge.jsx';
+import StateMessage from '../components/StateMessage.jsx';
+export default function Analytics(){
+ const [analytics,setAnalytics]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState('');
+ async function loadAnalytics(){setLoading(true);try{setAnalytics(await fetchAnalytics());setError('')}catch(err){setError(err.response?.data?.error||'Could not load analytics. Is the backend running?')}finally{setLoading(false)}}
+ useEffect(()=>{loadAnalytics()},[]);
+ const summary=analytics?.summary,maxDaily=Math.max(1,...(analytics?.daily||[]).map(x=>Number(x.detections))),maxMonthly=Math.max(1,...(analytics?.monthly||[]).map(x=>Number(x.detections)));
+ return <><StateMessage error={error} onDismiss={()=>setError('')}/><div className="page-heading"><div><p className="eyebrow">OVERVIEW</p><h1>Analytics</h1><p className="muted">Summary and trends for predictions saved in the local database.</p></div><button className="secondary-button" onClick={loadAnalytics} disabled={loading}><RefreshCw size={16}/> Refresh</button></div>
+ <div className="stat-grid">{[['Total detections',summary?.total??'—'],['Spill detections',summary?.spill_detections??'—'],['Clean detections',summary?.clean_detections??'—'],['Average coverage',summary?`${Number(summary.average_spill_percentage).toFixed(2)}%`:'—']].map(([label,value])=><div className="stat-card" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+ <div className="analytics-grid"><section className="panel wide-panel"><h2><BarChart3 size={19}/> Risk distribution</h2>{!analytics?.risks?.length?<p className="muted">No analytics available yet. Run some detections first.</p>:analytics.risks.map(item=><div className="risk-bar-row" key={item.risk_level}><span><SeverityBadge value={item.risk_level}/></span><div className="bar-track"><div className="bar-fill" style={{width:`${Math.min(100,Number(item.count)/Math.max(1,Number(summary?.total||0))*100)}%`}}/></div><strong>{item.count}</strong></div>)}</section>
+ <section className="panel wide-panel"><h2>Daily detection trends</h2>{!analytics?.daily?.length?<p className="muted">Daily trends will appear after detections are saved.</p>:<div className="trend-list">{analytics.daily.slice(-10).map(item=><div className="trend-row" key={item.date}><span>{item.date}</span><div className="bar-track"><div className="bar-fill" style={{width:`${Number(item.detections)/maxDaily*100}%`}}/></div><strong>{item.detections}</strong></div>)}</div>}</section>
+ <section className="panel wide-panel"><h2>Monthly detection trends</h2>{!analytics?.monthly?.length?<p className="muted">Monthly trends will appear after detections are saved.</p>:<div className="trend-list">{analytics.monthly.slice(-12).map(item=><div className="trend-row" key={item.month}><span>{item.month}</span><div className="bar-track"><div className="bar-fill" style={{width:`${Number(item.detections)/maxMonthly*100}%`}}/></div><strong>{item.detections}</strong></div>)}</div>}</section>
+ <section className="panel wide-panel report-placeholder"><FileText size={22}/><div><h2>Reports</h2><p className="muted">PDF report generation is not implemented yet; this is the next feature to build.</p></div></section></div></>;
+}
